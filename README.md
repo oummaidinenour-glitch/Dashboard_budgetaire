@@ -9,8 +9,8 @@
 
 | Fichier | Description | Lien |
 |--------|-------------|------|
-| 📄 `compte_rendu_Ommaidine_Nour.pdf` | Compte rendu complet du projet | [📥 Télécharger le PDF](https://github.com/oummaidinenour-glitch/Dashboard_budgetaire/raw/main/compte_rendu_Ommaidine_Nour.pdf) |
-| 📊 `Projet05_Dashboard_Budgetaire_ENCG.xlsx` | Fichier Excel avec Dashboard interactif | [📥 Télécharger le fichier Excel](https://github.com/oummaidinenour-glitch/Dashboard_budgetaire/raw/main/Projet05_Dashboard_Budgetaire_ENCG.xlsx) |
+| 📄 Compte Rendu | Compte rendu complet du projet | [📥 Télécharger le PDF](https://github.com/oummaidinenour-glitch/Dashboard_budgetaire/raw/main/compte_rendu_Oummaidine_Nour.pdf) |
+| 📊 Dashboard Excel | Fichier Excel avec Dashboard interactif | [📥 Télécharger le fichier Excel](https://github.com/oummaidinenour-glitch/Dashboard_budgetaire/raw/main/Projet05_Dashboard_Budgetaire_ENCG.xlsx) |
 
 > 💡 **Astuce** : Cliquez sur **"📥 Télécharger"** pour ouvrir directement le fichier dans votre navigateur ou le sauvegarder.
 
