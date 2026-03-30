@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de Bord Budgétaire — ENCG Settat 2024-2025</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #006633;
+      --primary-dark: #004d26;
+      --primary-light: #e8f5ee;
+      --secondary: #D4A017;
+      --secondary-light: #fdf6e3;
+      --danger: #c0392b;
+      --danger-light: #fdecea;
+      --success: #27ae60;
+      --success-light: #eafaf1;
+      --warning: #f39c12;
+      --warning-light: #fef9e7;
+      --neutral: #2c3e50;
+      --bg: #f0f4f1;
+      --card: #ffffff;
+      --border: #d0e4d8;
+      --text: #1a2e22;
+      --text-muted: #5a7a65;
+      --shadow: 0 2px 16px rgba(0,102,51,0.10);
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, #008844 100%);
+      padding: 28px 40px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(0,77,38,0.3);
+    }
+    .header-left h1 { color: #fff; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.3px; }
+    .header-left p { color: rgba(255,255,255,0.80); font-size: 0.88rem; margin-top: 5px; }
+    .header-badge {
+      background: var(--secondary); color: #1a1a00; font-size: 0.80rem;
+      font-weight: 700; padding: 6px 16px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .header-meta {
+      text-align: right; color: rgba(255,255,255,0.75); font-size: 0.80rem;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .container { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ── KPI CARDS ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 28px; }
+    .kpi-card {
+      background: var(--card); border-radius: var(--radius); padding: 18px 16px;
+      box-shadow: var(--shadow); border-left: 4px solid var(--primary);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,102,51,0.15); }
+    .kpi-card.danger { border-left-color: var(--danger); }
+    .kpi-card.success { border-left-color: var(--success); }
+    .kpi-card.warning { border-left-color: var(--warning); }
+    .kpi-card.secondary { border-left-color: var(--secondary); }
+    .kpi-icon { font-size: 1.5rem; margin-bottom: 8px; }
+    .kpi-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.35rem; font-weight: 800; color: var(--neutral); line-height: 1; }
+    .kpi-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; }
+    .kpi-value.danger { color: var(--danger); }
+    .kpi-value.success { color: var(--success); }
+    .kpi-value.warning { color: var(--warning); }
+
+    /* ── CHARTS GRID ── */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .charts-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .chart-card {
+      background: var(--card); border-radius: var(--radius); padding: 22px;
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title { font-size: 0.88rem; font-weight: 700; color: var(--primary); margin-bottom: 16px;
+      padding-bottom: 10px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .chart-title .badge { background: var(--primary-light); color: var(--primary);
+      font-size: 0.70rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    canvas { max-height: 280px; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-size: 1rem; font-weight: 700; color: var(--primary);
+      margin: 28px 0 16px; padding-left: 12px;
+      border-left: 4px solid var(--secondary);
+    }
+
+    /* ── TABLE ── */
+    .table-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--border); margin-bottom: 24px; }
+    .table-header { background: var(--primary); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+    .table-header h3 { font-size: 0.90rem; font-weight: 700; }
+    .table-controls { display: flex; gap: 10px; align-items: center; }
+    .table-controls input, .table-controls select {
+      border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px;
+      font-size: 0.80rem; background: #fff; color: var(--text);
+    }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.80rem; }
+    .data-table th { background: var(--primary-light); color: var(--primary); font-weight: 700;
+      padding: 10px 12px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+    .data-table td { padding: 8px 12px; border-bottom: 1px solid #f0f4f1; }
+    .data-table tr:hover td { background: var(--primary-light); }
+    .data-table tr:nth-child(even) td { background: #fafbfa; }
+    .badge-dep { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.70rem; font-weight: 700; }
+    .badge-rh    { background: #e8f4fd; color: #1a6fa3; }
+    .badge-mkt   { background: #fdecea; color: #c0392b; }
+    .badge-prod  { background: #eafaf1; color: #1e8449; }
+    .badge-it    { background: #f4ecf7; color: #7d3c98; }
+    .badge-admin { background: #fef9e7; color: #9a7d0a; }
+    .badge-ok    { background: #eafaf1; color: var(--success); }
+    .badge-dep2  { background: var(--danger-light); color: var(--danger); }
+    .badge-eco   { background: var(--success-light); color: var(--success); }
+    .num-pos { color: var(--danger); font-weight: 600; }
+    .num-neg { color: var(--success); font-weight: 600; }
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-top: 1px solid var(--border); }
+    .page-btn { border: 1px solid var(--border); background: #fff; color: var(--primary); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.80rem; font-weight: 600; }
+    .page-btn:hover, .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .page-info { font-size: 0.78rem; color: var(--text-muted); }
+
+    /* ── DEPT TABLE ── */
+    .dept-table-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    .progress-bar { background: #e0ebe5; border-radius: 4px; height: 8px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+
+    /* ── FOOTER ── */
+    footer { background: var(--primary-dark); color: rgba(255,255,255,0.7); text-align: center; padding: 18px; font-size: 0.78rem; margin-top: 10px; }
+    footer strong { color: var(--secondary); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>🎯 Tableau de Bord Budgétaire</h1>
+    <p>Budget vs Réalisé — 5 Départements · 8 Postes de Charges · 12 Mois · 480 lignes de données</p>
+  </div>
+  <div class="header-meta">
+    <span class="header-badge">📊 Projet 05 — Finance ⭐⭐⭐</span>
+    <span>ENCG Settat — Université Hassan 1ᵉʳ</span>
+    <span>Année académique 2024-2025</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- KPI CARDS -->
+  <p class="section-title">📌 Indicateurs Clés de Performance (KPIs)</p>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Budget Total Annuel</div>
+      <div class="kpi-value">16.63M</div>
+      <div class="kpi-sub">MAD — tous départements</div>
+    </div>
+    <div class="kpi-card secondary">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Réalisé Total Annuel</div>
+      <div class="kpi-value">17.02M</div>
+      <div class="kpi-sub">MAD — dépenses effectives</div>
+    </div>
+    <div class="kpi-card danger">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Écart Global</div>
+      <div class="kpi-value danger">+0.39M</div>
+      <div class="kpi-sub">Dépassement budgétaire</div>
+    </div>
+    <div class="kpi-card warning">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">Taux de Consommation</div>
+      <div class="kpi-value warning">102.3%</div>
+      <div class="kpi-sub">Réalisé / Budget</div>
+    </div>
+    <div class="kpi-card danger">
+      <div class="kpi-icon">🔴</div>
+      <div class="kpi-label">Lignes Dépassement</div>
+      <div class="kpi-value danger">138</div>
+      <div class="kpi-sub">Écart &gt; +10% du budget</div>
+    </div>
+    <div class="kpi-card success">
+      <div class="kpi-icon">🟢</div>
+      <div class="kpi-label">Lignes Économie</div>
+      <div class="kpi-value success">94</div>
+      <div class="kpi-sub">Écart &lt; -10% du budget</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1: Monthly evolution + Dept comparison -->
+  <p class="section-title">📅 Évolution Mensuelle & Répartition par Département</p>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">📅 Évolution Mensuelle — Budget vs Réalisé <span class="badge">12 mois</span></div>
+      <canvas id="lineChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🏢 Budget vs Réalisé par Département <span class="badge">5 depts</span></div>
+      <canvas id="deptBar"></canvas>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 2: Ecart waterfall (bar) + poste donut + dept donut -->
+  <p class="section-title">📊 Analyse des Écarts & Répartition Budgétaire</p>
+  <div class="charts-grid-3">
+    <div class="chart-card">
+      <div class="chart-title">⚖️ Écart Mensuel (MAD) <span class="badge">Budget - Réalisé</span></div>
+      <canvas id="ecartBar"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🥧 Répartition Budget par Poste <span class="badge">8 postes</span></div>
+      <canvas id="posteDonut"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🥧 Répartition Budget par Département <span class="badge">5 depts</span></div>
+      <canvas id="deptDonut"></canvas>
+    </div>
+  </div>
+
+  <!-- DEPT SUMMARY TABLE -->
+  <p class="section-title">🏢 Synthèse par Département</p>
+  <div class="table-card" style="margin-bottom:20px;">
+    <div class="table-header">
+      <h3>📋 Performance budgétaire par département</h3>
+    </div>
+    <table class="data-table" style="font-size:0.84rem;">
+      <thead><tr>
+        <th>Département</th><th>Budget (MAD)</th><th>Réalisé (MAD)</th>
+        <th>Écart (MAD)</th><th>Écart %</th><th>Taux Conso</th>
+        <th>Progression</th><th>Statut</th>
+      </tr></thead>
+      <tbody id="deptTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- DATA TABLE -->
+  <p class="section-title">🗃️ Données Brutes — 480 Lignes</p>
+  <div class="table-card">
+    <div class="table-header">
+      <h3>📊 Données budgétaires complètes</h3>
+      <div class="table-controls">
+        <input type="text" id="searchBox" placeholder="🔍 Rechercher..." oninput="filterTable()">
+        <select id="deptFilter" onchange="filterTable()">
+          <option value="">Tous les départements</option>
+          <option>RH</option><option>Marketing</option><option>Production</option><option>IT</option><option>Administration</option>
+        </select>
+        <select id="statusFilter" onchange="filterTable()">
+          <option value="">Tous statuts</option>
+          <option value="Dépassement">⚠️ Dépassement</option>
+          <option value="Économie">✅ Économie</option>
+          <option value="Normal">🔵 Normal</option>
+        </select>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr>
+        <th>#</th><th>Mois</th><th>Département</th><th>Poste de Charges</th>
+        <th>Budget (MAD)</th><th>Réalisé (MAD)</th><th>Écart (MAD)</th><th>Écart %</th><th>Statut</th>
+      </tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+</div>
+
+<footer>
+  <strong>ENCG Settat</strong> — Université Hassan 1ᵉʳ &nbsp;|&nbsp; Projet 05 — Tableau de Bord Budgétaire (Finance ⭐⭐⭐) &nbsp;|&nbsp;
+  Données synthétiques 2024-2025 &nbsp;|&nbsp; 480 enregistrements · 5 départements · 8 postes · 12 mois
+</footer>
+
+<script>
+// ── DATA ────────────────────────────────────────────────
+const MONTHLY_LABELS = [{"budget": 1386000, "realise": 1402052.0}, {"budget": 1386000, "realise": 1411728.0}, {"budget": 1386000, "realise": 1448137.0}, {"budget": 1386000, "realise": 1392539.0}, {"budget": 1386000, "realise": 1313603.0}, {"budget": 1386000, "realise": 1441298.0}, {"budget": 1386000, "realise": 1376252.0}, {"budget": 1386000, "realise": 1416704.0}, {"budget": 1386000, "realise": 1484322.0}, {"budget": 1386000, "realise": 1369487.0}, {"budget": 1386000, "realise": 1468901.0}, {"budget": 1386000, "realise": 1492729.0}];
+const MONTHLY_BUDGET  = [1386000, 1386000, 1386000, 1386000, 1386000, 1386000, 1386000, 1386000, 1386000, 1386000, 1386000, 1386000];
+const MONTHLY_REALISE = [1402052.0, 1411728.0, 1448137.0, 1392539.0, 1313603.0, 1441298.0, 1376252.0, 1416704.0, 1484322.0, 1369487.0, 1468901.0, 1492729.0];
+const MONTHLY_ECARTS  = [16052.0, 25728.0, 62137.0, 6539.0, -72397.0, 55298.0, -9748.0, 30704.0, 98322.0, -16513.0, 82901.0, 106729.0];
+
+const DEPT_LABELS  = ["RH", "Marketing", "Production", "IT", "Administration"];
+const DEPT_BUDGET  = [3504000, 2610000, 5376000, 3348000, 1794000];
+const DEPT_REALISE = [3673130.0, 2627763.0, 5444981.0, 3416363.0, 1855515.0];
+const DEPT_ECART_PCT = [4.8, 0.7, 1.3, 2.0, 3.4];
+
+const POSTE_LABELS  = ["Salaires", "Chg. Soc.", "Loyer", "Matières", "Informatiq.", "Déplacemts", "Formation", "Publicité"];
+const POSTE_BUDGET  = [8400000, 2520000, 1080000, 1572000, 972000, 588000, 792000, 708000];
+const POSTE_REALISE = [8710896.0, 2584826.0, 1112952.0, 1577295.0, 978339.0, 604339.0, 733739.0, 715366.0];
+
+const TABLE_DATA = [{"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 193639.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 44820.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 13950.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 7274.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 5573.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 7635.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 23537.0}, {"mois": "Janvier", "mois_n": 1, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 2564.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 93933.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 23710.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 10889.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 6133.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 6645.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 13493.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 8640.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 46709.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 199799.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 69677.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 40032.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 69921.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 13708.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10993.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 14342.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 4411.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 156375.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 37231.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 8571.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 17174.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 57950.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 8492.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 20571.0}, {"mois": "Janvier", "mois_n": 1, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 4448.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 77587.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 27208.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 17485.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 12490.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 6911.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9607.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 5823.0}, {"mois": "Janvier", "mois_n": 1, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 2102.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 198329.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 45270.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 13667.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 7486.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4260.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 6392.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 17208.0}, {"mois": "Février", "mois_n": 2, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 2794.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 102056.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 27529.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 11617.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 5423.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 7414.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 17920.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 8634.0}, {"mois": "Février", "mois_n": 2, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 47864.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 195460.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 73369.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 30988.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 82601.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 14590.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10760.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 15642.0}, {"mois": "Février", "mois_n": 2, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 5469.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 150428.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 44086.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 9116.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 16657.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 47309.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 7417.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 16279.0}, {"mois": "Février", "mois_n": 2, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 4789.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 87791.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 21282.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 19479.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 11739.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 7115.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9032.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 4630.0}, {"mois": "Février", "mois_n": 2, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 1837.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 188019.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 49955.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 15808.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 9433.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4899.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 6354.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 24380.0}, {"mois": "Mars", "mois_n": 3, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 3071.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 81355.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 23907.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 10366.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 6426.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 9095.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 14833.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 6763.0}, {"mois": "Mars", "mois_n": 3, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 43769.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 268059.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 68089.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 42295.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 98967.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 9895.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 11083.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 16390.0}, {"mois": "Mars", "mois_n": 3, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 5174.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 120475.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 41979.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 8646.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 19878.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 50074.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 9612.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 21066.0}, {"mois": "Mars", "mois_n": 3, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3701.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 76518.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 20058.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 21331.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 14018.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 5636.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9680.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 5318.0}, {"mois": "Mars", "mois_n": 3, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 1762.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 202501.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 55931.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 16972.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 8257.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4101.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 6648.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 16556.0}, {"mois": "Avril", "mois_n": 4, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 3575.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 111291.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 32851.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 11316.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 5059.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 9370.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 17982.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 6834.0}, {"mois": "Avril", "mois_n": 4, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 45648.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 186491.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 74200.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 39422.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 74065.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 12121.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10399.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 13890.0}, {"mois": "Avril", "mois_n": 4, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 5845.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 128603.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 35284.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 10357.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 22239.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 45023.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 7557.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 21925.0}, {"mois": "Avril", "mois_n": 4, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 4320.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 74643.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 23108.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 15631.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 10919.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 5731.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9498.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 4560.0}, {"mois": "Avril", "mois_n": 4, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 1816.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 152712.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 57912.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 13674.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 9457.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 5819.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 5938.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 18304.0}, {"mois": "Mai", "mois_n": 5, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 3263.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 86041.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 24878.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 14330.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 6291.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 8073.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 17008.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 9144.0}, {"mois": "Mai", "mois_n": 5, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 40327.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 188930.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 65500.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 34630.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 85579.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 13340.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10893.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 18205.0}, {"mois": "Mai", "mois_n": 5, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 4297.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 127536.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 37273.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 11647.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 18389.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 44804.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 7996.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 17798.0}, {"mois": "Mai", "mois_n": 5, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3726.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 68994.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 26759.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 17951.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 13974.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 6241.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 7562.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 6099.0}, {"mois": "Mai", "mois_n": 5, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 2309.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 217368.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 64290.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 17392.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 7092.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 5071.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 6338.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 19608.0}, {"mois": "Juin", "mois_n": 6, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 2530.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 92301.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 34603.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 11113.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 6802.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 8016.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 14838.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 9623.0}, {"mois": "Juin", "mois_n": 6, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 54818.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 229308.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 73086.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 30867.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 79788.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 14490.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10517.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 15553.0}, {"mois": "Juin", "mois_n": 6, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 5596.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 109573.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 41093.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 10211.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 23222.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 44149.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 9634.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 15337.0}, {"mois": "Juin", "mois_n": 6, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3577.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 79351.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 24527.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 16453.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 10415.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 7057.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 8266.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 5289.0}, {"mois": "Juin", "mois_n": 6, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 2136.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 177784.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 56887.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 15437.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 9551.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4509.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 7745.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 7979.0}, {"mois": "Juillet", "mois_n": 7, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 3266.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 89300.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 26974.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 13449.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 5094.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 8027.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 18291.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 2547.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 40737.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 203738.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 78758.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 41032.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 99595.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 11614.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 8831.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 7138.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 5323.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 157936.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 42182.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 8231.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 22937.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 46988.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 8683.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 6004.0}, {"mois": "Juillet", "mois_n": 7, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3465.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 64711.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 23429.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 16721.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 12743.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 6642.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 8113.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 1830.0}, {"mois": "Juillet", "mois_n": 7, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 2031.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 212784.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 62556.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 12854.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 7915.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4653.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 5750.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 9186.0}, {"mois": "Août", "mois_n": 8, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 2774.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 106067.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 29659.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 11893.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 4943.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 6801.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 17599.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 3491.0}, {"mois": "Août", "mois_n": 8, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 51923.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 231661.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 58030.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 30484.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 80181.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 14155.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 11384.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 7871.0}, {"mois": "Août", "mois_n": 8, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 4520.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 119576.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 33584.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 11320.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 23473.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 49128.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 8546.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 9584.0}, {"mois": "Août", "mois_n": 8, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 4663.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 90786.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 25747.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 21106.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 9959.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 6688.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 8576.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 2503.0}, {"mois": "Août", "mois_n": 8, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 2331.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 205974.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 50043.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 17024.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 6906.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 5844.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 8144.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 18179.0}, {"mois": "Septembre", "mois_n": 9, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 3440.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 95392.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 26849.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 13658.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 5466.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 6636.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 13459.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 7610.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 52458.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 265486.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 61489.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 37681.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 83289.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 14550.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10345.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 17935.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 4331.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 157061.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 34766.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 12050.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 18524.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 43168.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 7951.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 20006.0}, {"mois": "Septembre", "mois_n": 9, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3782.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 79686.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 23053.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 17533.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 12608.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 5531.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9932.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 4103.0}, {"mois": "Septembre", "mois_n": 9, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 2380.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 186369.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 59820.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 16752.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 8706.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4828.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 5936.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 21714.0}, {"mois": "Octobre", "mois_n": 10, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 2856.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 89829.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 33037.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 13295.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 5641.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 7550.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 14750.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 7848.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 42222.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 191601.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 65220.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 41865.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 92729.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 14173.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10662.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 14106.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 5196.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 106621.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 36456.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 9920.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 21040.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 54094.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 8048.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 17944.0}, {"mois": "Octobre", "mois_n": 10, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3622.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 75696.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 26561.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 20491.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 10655.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 5124.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9236.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 5366.0}, {"mois": "Octobre", "mois_n": 10, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 1908.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 202968.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 58812.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 13648.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 7197.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4149.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 6426.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 20201.0}, {"mois": "Novembre", "mois_n": 11, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 3480.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 104243.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 30549.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 10773.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 6591.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 8142.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 13764.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 8659.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 37000.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 248447.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 56934.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 34652.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 75680.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 14438.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 10272.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 12601.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 4598.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 143141.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 44482.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 10870.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 24303.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 52909.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 9600.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 21178.0}, {"mois": "Novembre", "mois_n": 11, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 4260.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 82907.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 25925.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 18705.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 14147.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 6705.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 9089.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 4618.0}, {"mois": "Novembre", "mois_n": 11, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 1838.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Salaires", "budget": 180000, "realise": 203206.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Charges sociales", "budget": 54000, "realise": 55540.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Loyer & Charges", "budget": 15000, "realise": 16060.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Matières & Fournitures", "budget": 8000, "realise": 7439.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Informatique & Licences", "budget": 5000, "realise": 4255.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Déplacements & Missions", "budget": 7000, "realise": 6540.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Formation", "budget": 20000, "realise": 18574.0}, {"mois": "Décembre", "mois_n": 12, "dept": "RH", "poste": "Publicité & Communication", "budget": 3000, "realise": 2844.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Salaires", "budget": 95000, "realise": 101883.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Charges sociales", "budget": 28500, "realise": 26006.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Loyer & Charges", "budget": 12000, "realise": 13171.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Matières & Fournitures", "budget": 6000, "realise": 6615.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Informatique & Licences", "budget": 8000, "realise": 6766.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Déplacements & Missions", "budget": 15000, "realise": 14746.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Formation", "budget": 8000, "realise": 8296.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Marketing", "poste": "Publicité & Communication", "budget": 45000, "realise": 44384.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Salaires", "budget": 220000, "realise": 241519.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Charges sociales", "budget": 66000, "realise": 78008.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Loyer & Charges", "budget": 35000, "realise": 36877.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Matières & Fournitures", "budget": 85000, "realise": 93348.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Informatique & Licences", "budget": 12000, "realise": 13952.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Déplacements & Missions", "budget": 10000, "realise": 11262.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Formation", "budget": 15000, "realise": 14582.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Production", "poste": "Publicité & Communication", "budget": 5000, "realise": 4112.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Salaires", "budget": 130000, "realise": 146616.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Charges sociales", "budget": 39000, "realise": 45294.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Loyer & Charges", "budget": 10000, "realise": 12014.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Matières & Fournitures", "budget": 20000, "realise": 19752.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Informatique & Licences", "budget": 50000, "realise": 55950.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Déplacements & Missions", "budget": 8000, "realise": 8308.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Formation", "budget": 18000, "realise": 19103.0}, {"mois": "Décembre", "mois_n": 12, "dept": "IT", "poste": "Publicité & Communication", "budget": 4000, "realise": 3633.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Salaires", "budget": 75000, "realise": 82442.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Charges sociales", "budget": 22500, "realise": 18711.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Loyer & Charges", "budget": 18000, "realise": 17180.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Matières & Fournitures", "budget": 12000, "realise": 13100.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Informatique & Licences", "budget": 6000, "realise": 5890.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Déplacements & Missions", "budget": 9000, "realise": 7974.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Formation", "budget": 5000, "realise": 5035.0}, {"mois": "Décembre", "mois_n": 12, "dept": "Administration", "poste": "Publicité & Communication", "budget": 2000, "realise": 1742.0}];
+
+// ── COLORS ───────────────────────────────────────────────
+const ENCG_GREEN  = '#006633';
+const ENCG_GOLD   = '#D4A017';
+const PALETTE = ['#006633','#D4A017','#1a6fa3','#7d3c98','#c0392b','#27ae60','#f39c12','#2980b9'];
+
+const fmtMAD = v => new Intl.NumberFormat('fr-MA').format(Math.round(v)) + ' MAD';
+const fmtPct = v => (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+
+// ── CHART 1: Monthly Line ────────────────────────────────
+new Chart(document.getElementById('lineChart'), {
+  type: 'line',
+  data: {
+    labels: MONTHLY_LABELS,
+    datasets: [
+      { label: 'Budget', data: MONTHLY_BUDGET, borderColor: ENCG_GREEN, backgroundColor: 'rgba(0,102,51,0.08)',
+         borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: ENCG_GREEN, tension: 0.3, fill: true },
+      { label: 'Réalisé', data: MONTHLY_REALISE, borderColor: ENCG_GOLD, backgroundColor: 'rgba(212,160,23,0.10)',
+         borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: ENCG_GOLD, tension: 0.3, fill: true },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { position: 'top', labels: { font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ' ' + fmtMAD(ctx.raw) } } },
+    scales: {
+      y: { ticks: { callback: v => (v/1e6).toFixed(1) + 'M' }, grid: { color: '#f0f4f1' } },
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+// ── CHART 2: Dept Bar ────────────────────────────────────
+new Chart(document.getElementById('deptBar'), {
+  type: 'bar',
+  data: {
+    labels: DEPT_LABELS,
+    datasets: [
+      { label: 'Budget', data: DEPT_BUDGET, backgroundColor: 'rgba(0,102,51,0.75)', borderRadius: 5 },
+      { label: 'Réalisé', data: DEPT_REALISE, backgroundColor: 'rgba(212,160,23,0.80)', borderRadius: 5 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => ' ' + fmtMAD(ctx.raw) } } },
+    scales: {
+      y: { ticks: { callback: v => (v/1e6).toFixed(1) + 'M' }, grid: { color: '#f0f4f1' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ── CHART 3: Écart Bar (waterfall style) ─────────────────
+new Chart(document.getElementById('ecartBar'), {
+  type: 'bar',
+  data: {
+    labels: MONTHLY_LABELS,
+    datasets: [{
+      label: 'Écart (MAD)',
+      data: MONTHLY_ECARTS,
+      backgroundColor: MONTHLY_ECARTS.map(v => v > 0 ? 'rgba(192,57,43,0.75)' : 'rgba(39,174,96,0.75)'),
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmtMAD(ctx.raw) } } },
+    scales: {
+      y: { ticks: { callback: v => (v/1e3).toFixed(0) + 'k' }, grid: { color: '#f0f4f1' } },
+      x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45 } }
+    }
+  }
+});
+
+// ── CHART 4: Poste Donut ─────────────────────────────────
+new Chart(document.getElementById('posteDonut'), {
+  type: 'doughnut',
+  data: { labels: POSTE_LABELS, datasets: [{ data: POSTE_BUDGET, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }] },
+  options: {
+    responsive: true, cutout: '60%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } },
+      tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtMAD(ctx.raw) } }
+    }
+  }
+});
+
+// ── CHART 5: Dept Donut ──────────────────────────────────
+new Chart(document.getElementById('deptDonut'), {
+  type: 'doughnut',
+  data: { labels: DEPT_LABELS, datasets: [{ data: DEPT_BUDGET, backgroundColor: PALETTE, borderWidth: 2, borderColor: '#fff' }] },
+  options: {
+    responsive: true, cutout: '60%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 8 } },
+      tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtMAD(ctx.raw) } }
+    }
+  }
+});
+
+// ── DEPT SUMMARY TABLE ───────────────────────────────────
+const deptColors = {RH:'#e8f4fd',Marketing:'#fdecea',Production:'#eafaf1',IT:'#f4ecf7',Administration:'#fef9e7'};
+const deptTxt    = {RH:'#1a6fa3',Marketing:'#c0392b',Production:'#1e8449',IT:'#7d3c98',Administration:'#9a7d0a'};
+const tbody = document.getElementById('deptTableBody');
+DEPT_LABELS.forEach((dept, i) => {
+  const bud = DEPT_BUDGET[i], real = DEPT_REALISE[i];
+  const ecart = real - bud, pct = ((real-bud)/bud*100).toFixed(1);
+  const taux = (real/bud*100).toFixed(1);
+  const statut = ecart > 0 ? '🔴 Dépassement' : '🟢 Sous budget';
+  const fillColor = ecart > 0 ? '#c0392b' : '#27ae60';
+  const fillPct = Math.min(Math.abs(taux), 130);
+  tbody.innerHTML += `<tr>
+    <td><span class="badge-dep" style="background:${deptColors[dept]||'#eee'};color:${deptTxt[dept]||'#333'}">${dept}</span></td>
+    <td>${fmtMAD(bud)}</td>
+    <td>${fmtMAD(real)}</td>
+    <td class="${ecart>0?'num-pos':'num-neg'}">${ecart>0?'+':''}${fmtMAD(ecart)}</td>
+    <td class="${ecart>0?'num-pos':'num-neg'}">${ecart>0?'+':''}${pct}%</td>
+    <td>${taux}%</td>
+    <td><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(taux,130)}%;background:${fillColor}"></div></div></td>
+    <td>${statut}</td>
+  </tr>`;
+});
+
+// ── DATA TABLE WITH FILTER & PAGINATION ──────────────────
+let currentPage = 1;
+const pageSize = 12;
+let filteredData = [...TABLE_DATA];
+
+const deptBadgeClass = {RH:'badge-rh',Marketing:'badge-mkt',Production:'badge-prod',IT:'badge-it',Administration:'badge-admin'};
+
+function filterTable() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const d = document.getElementById('deptFilter').value;
+  const s = document.getElementById('statusFilter').value;
+  filteredData = TABLE_DATA.filter(r => {
+    const match = (r.mois+r.dept+r.poste).toLowerCase().includes(q);
+    const matchD = !d || r.dept === d;
+    const matchS = !s || (
+      s === 'Dépassement' ? r.realise > r.budget*1.1 :
+      s === 'Économie'    ? r.realise < r.budget*0.9 :
+      Math.abs(r.realise - r.budget) / r.budget <= 0.1
+    );
+    return match && matchD && matchS;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * pageSize;
+  const slice = filteredData.slice(start, start + pageSize);
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = slice.map((r, i) => {
+    const ecart = r.realise - r.budget;
+    const pct = ((ecart / r.budget) * 100).toFixed(1);
+    const statut = ecart > r.budget*0.1 ? '<span class="badge-dep badge-dep2">⚠️ Dépassement</span>'
+                 : ecart < -r.budget*0.1 ? '<span class="badge-dep badge-eco">✅ Économie</span>'
+                 : '<span class="badge-dep badge-ok">🔵 Normal</span>';
+    const bc = deptBadgeClass[r.dept] || '';
+    return `<tr>
+      <td>${start+i+1}</td>
+      <td>${r.mois}</td>
+      <td><span class="badge-dep ${bc}">${r.dept}</span></td>
+      <td>${r.poste}</td>
+      <td>${fmtMAD(r.budget)}</td>
+      <td>${fmtMAD(r.realise)}</td>
+      <td class="${ecart>0?'num-pos':'num-neg'}">${ecart>0?'+':''}${fmtMAD(ecart)}</td>
+      <td class="${ecart>0?'num-pos':'num-neg'}">${ecart>0?'+':''}${pct}%</td>
+      <td>${statut}</td>
+    </tr>`;
+  }).join('');
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = Math.ceil(filteredData.length / pageSize);
+  const pg = document.getElementById('pagination');
+  let html = `<span class="page-info">Page ${currentPage} / ${total} (${filteredData.length} lignes)</span>`;
+  if (currentPage > 1) html += `<button class="page-btn" onclick="goPage(${currentPage-1})">◀</button>`;
+  const start = Math.max(1, currentPage-2), end = Math.min(total, currentPage+2);
+  for (let p = start; p <= end; p++) {
+    html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  if (currentPage < total) html += `<button class="page-btn" onclick="goPage(${currentPage+1})">▶</button>`;
+  pg.innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; renderTable(); window.scrollTo({top: document.getElementById('tableBody').closest('.table-card').offsetTop - 20, behavior:'smooth'}); }
+
+renderTable();
+</script>
+</body>
+</html>
